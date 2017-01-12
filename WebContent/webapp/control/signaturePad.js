@@ -372,8 +372,7 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
 		    { 
 			  // redraw according to the content (needed in case of percentage dimensions)
 			  var i, padcanvas, pad, oPads = document.querySelectorAll("div.m-signature-pad");
-			  for (i=0;i<oPads.length;i++) { sap.ui.getCore().byId(oPads[i].id).invalidate(); }
-			  
+			  for (i=0;i<oPads.length;i++) { sap.ui.getCore().byId(oPads[i].id).invalidate(); }	  
 		    }
   	  };
 
