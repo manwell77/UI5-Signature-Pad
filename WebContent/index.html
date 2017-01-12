@@ -1,0 +1,34 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'/>
+		<meta http-equiv="Access-Control-Allow-Origin" content="*"/>
+		<link rel="stylesheet" type="text/css" href="webapp/control/signaturePad.css"/>
+		<script src="https://openui5.hana.ondemand.com/resources/sap-ui-core.js"
+				id="sap-ui-bootstrap"
+				data-sap-ui-bindingSyntax="complex"				
+				data-sap-ui-libs="sap.m"
+				data-sap-ui-theme="sap_bluecrystal"
+				data-sap-ui-preload="async"
+				data-sap-ui-resourceroots='{ "sap.ui.root": "./" }'>
+		</script>
+		<script> 
+	        sap.ui.getCore().attachInit( function () {
+            // prepare app
+			var app = new sap.m.App({id:"app",initialPage:"main"});
+			var page = sap.ui.view({id:"main",viewName:"sap.ui.root.webapp.main",type:sap.ui.core.mvc.ViewType.XML});
+			var basic = sap.ui.view({id:"basic",viewName:"sap.ui.root.webapp.basic",type:sap.ui.core.mvc.ViewType.XML});
+			var dotted = sap.ui.view({id:"dotted",viewName:"sap.ui.root.webapp.dotted",type:sap.ui.core.mvc.ViewType.XML});
+			var custom = sap.ui.view({id:"custompalette",viewName:"sap.ui.root.webapp.custompalette",type:sap.ui.core.mvc.ViewType.XML});
+			var medium = sap.ui.view({id:"mediumpalette",viewName:"sap.ui.root.webapp.mediumpalette",type:sap.ui.core.mvc.ViewType.XML});
+			var margin = sap.ui.view({id:"margin",viewName:"sap.ui.root.webapp.margin",type:sap.ui.core.mvc.ViewType.XML});
+			app.addPage(page).addPage(basic).addPage(custom).addPage(dotted).addPage(medium).addPage(margin);
+			app.placeAt("content");
+	        }); 
+		</script>
+	</head>
+	<body class="sapUiBody" role="application">
+		<div id="content"></div>
+	</body>
+</html>

@@ -1,0 +1,21 @@
+<core:View xmlns:core="sap.ui.core" 
+           xmlns:mvc="sap.ui.core.mvc" 
+           xmlns="sap.m"
+           xmlns:l="sap.ui.layout"
+           xmlns:html="http://www.w3.org/1999/xhtml"
+           xmlns:pad="sap.ui.root.webapp.control"
+		   controllerName="sap.ui.root.webapp.main">
+	<Page title="Signature Pad Demo">
+		<content>	 	
+			<List headerText="Signature Pads">
+				<items>
+					<StandardListItem id="basic" title="Basic" description="Basic signature pad" type="Navigation" press="onItemPressed"/>
+					<StandardListItem id="dotted" title="Dotted line" description="Basic signature pad with dotted line" type="Navigation" press="onItemPressed"/>
+					<StandardListItem id="custompalette" title="Custom palette" description="Signature pad with custom pen color palette and custom background" type="Navigation" press="onItemPressed"/>
+                    <StandardListItem id="mediumpalette" title="Medium palette" description="Signature pad with medium palette and no buttons" type="Navigation" press="onItemPressed"/>
+					<StandardListItem id="margin" title="Margin" description="Basic signature pad with margin" type="Navigation" press="onItemPressed"/>
+				</items>
+			</List>
+ 		</content>
+	</Page>
+</core:View>	

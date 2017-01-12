@@ -1,0 +1,23 @@
+<core:View xmlns:core="sap.ui.core" 
+           xmlns:mvc="sap.ui.core.mvc" 
+           xmlns="sap.m"
+           xmlns:l="sap.ui.layout"
+           xmlns:html="http://www.w3.org/1999/xhtml"
+           xmlns:pad="sap.ui.root.webapp.control"
+           controllerName="sap.ui.root.webapp.sign">
+	<Page title="Custom palette">
+   		<headerContent>
+			<Button tooltip="Confirm signature" icon="sap-icon://signature" press="onSigned" />
+		</headerContent>
+		<content>	  		    
+			<pad:signaturePad width="100%" height="100%" penColor="#bdb76b" backgroundColor="#e8dede"> 
+		       <pad:custPenColor>
+		        <core:Item key="#bdb76b" text="mycolor1"></core:Item>
+		        <core:Item key="#8b008b" text="mycolor2"></core:Item>
+		        <core:Item key="#51b42c" text="mycolor3"></core:Item>
+		        <core:Item key="#7ae02b" text="mycolor4"></core:Item>		        
+		       </pad:custPenColor> 
+		    </pad:signaturePad>
+ 		</content>
+	</Page>
+</core:View>
