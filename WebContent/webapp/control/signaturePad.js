@@ -298,7 +298,7 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
 	  if (oControl.getClearButton())
 		{ var oClearButton = new sap.m.Button({ text: oControl.getClearText(), 
 			                                    width: sWidth,
-			                                    press: function(oEvent) { oControl.signature=""; oControl.setSignature(oControl.signature); } 
+			                                    press: function(oEvent) { oControl.clear(); } 
 		                                      });
 		  oClearButton.addStyleClass("sapUiNoContentPadding sapUiNoMarginTop sapUiNoMarginBottom");
           oControl.setAggregation("clearButton", oClearButton, true); 
@@ -307,9 +307,9 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
 	  // create cancel button
 	  if (oControl.getCancelButton())
 		{ var oCancelButton = new sap.m.Button({ text: oControl.getCancelText(), 
-			                                   width: sWidth,
-			                                   press: function(oEvent) { if (!(oControl.getBinding("signature")==undefined)) { oControl.signature=oControl.getBinding("signature").oValue; oControl.setSignature(oControl.signature); } }
-		                                      });
+			                                     width: sWidth,
+			                                     press: function(oEvent) { if (!(oControl.getBinding("signature")==undefined)) { oControl.signature=oControl.getBinding("signature").oValue; oControl.setSignature(oControl.signature); } }
+		                                       });
 		  oCancelButton.addStyleClass("sapUiNoContentPadding sapUiNoMarginTop sapUiNoMarginBottom");
           oControl.setAggregation("cancelButton", oCancelButton, true); 
       }
@@ -329,7 +329,7 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
 	  
     },
     
-    onAfterRendering: function(){
+    onAfterRendering: function() {
       
 	  // declare self
       var self = this;
@@ -350,35 +350,110 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
       this._handleTouchEnd = function(event) { var wasCanvasTouched = event.target === self._canvas; if (wasCanvasTouched) { event.preventDefault(); self._strokeEnd(event); } };
       this._handleMouseEvents(); this._handleTouchEvents();
       
+      // margin
+      // var margin = 0;
+      // if (this.getMargin()==true) { margin = 16; }
+      
       // set dim if explicitly defined  
-      if (!(this.getWidth()=="")) { this._pad.style.width=this.getWidth(); this._canvas.style.width=this._pad.clientWidth; }
-      if (!(this.getHeight()=="")) { this._pad.style.height=this.getHeight(); this._canvas.style.height=this._pad.clientHeight; }
+      // if (!(this.getWidth()==""))  { this._pad.style.width=this._canvas.style.width=this.getWidth(); }
+      // if (!(this.getHeight()=="")) { this._pad.style.height=this.getHeight(); this._canvas.style.height=this.getHeight(); }
       
       // adjust height
-  	  this._pad.style.height = (this._pad.clientHeight) + "px"; this._canvas.style.height=(this._pad.clientHeight-40) + "px";
+  	  // this._pad.style.height = (this._pad.clientHeight-margin) + "px"; this._canvas.style.height=(this._pad.clientHeight-40) + "px";
+  	  // if (margin>0) { this._pad.style.width = (this._pad.clientWidth-margin) + "px"; }
   	  
-      // attach resize event to window
-  	  window.onresize = function(canvas) 
-  	  {   
-  		  var ratio =  Math.max(window.devicePixelRatio || 1, 1); ratio = 1;
-  		  
-		  // when zoomed out to less than 100%, for some very strange reason, some browsers report devicePixelRatio as less than 1 and only part of the canvas is cleared then.
-		  if (!(typeof canvas == undefined || typeof canvas == null || canvas.tagName == undefined))
-		  	{   		
-		  	  canvas.width = canvas.offsetWidth * ratio;
-		      canvas.height = canvas.offsetHeight * ratio;				      	
-		  	}
-		  else
-		    { 
-			  // redraw according to the content (needed in case of percentage dimensions)
-			  var i, padcanvas, pad, oPads = document.querySelectorAll("div.m-signature-pad");
-			  for (i=0;i<oPads.length;i++) { sap.ui.getCore().byId(oPads[i].id).invalidate(); }	  
-		    }
-  	  };
+      var resizeTimer;
 
+      $(window).on('resize', function(oEvent) {
+
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+
+    		    { 
+    		      // get pixel ratio
+    		      var ratio=Math.max(window.devicePixelRatio||1,1);
+    			  // redraw according to the content
+    			  var i,j,startj,x,y,backR,backG,backB,topX,bottomX,leftX,rightX,topY,bottomY,leftY,rightY,realWidth,realHeight,realStartX,realStartY,pad,pads,startWidth,startHeight,startImage,endImage,margin,aspect,startX,startY,endWidth,endHeight;
+    			  // get pads
+    			  pads = document.querySelectorAll("div.m-signature-pad");
+    			  // for each pad
+    			  for (i=0;i<pads.length;i++) { if (pads[i].clientWidth>0) {
+    				  // get pad
+    				  pad=sap.ui.getCore().byId(pads[i].id);
+    				  // get initial dimension
+    				  startWidth=pad._canvas.width; startHeight=pad._canvas.height;
+    				  // get image
+    				  startImage=pad._ctx.getImageData(0,0,startWidth,startHeight); endImage=new Image(); endImage.src=pad._canvas.toDataURL();
+    				  // get margin
+    			      if (pad.getMargin()==true) { margin=16; } else { margin=0; }
+    			      // set dim if explicitly defined  
+    			      if (!(pad.getWidth()==""))  { pad._pad.style.width=pad._canvas.style.width=pad.getWidth(); }
+    			      if (!(pad.getHeight()=="")) { pad._pad.style.height=pad.getHeight(); pad._canvas.style.height=pad.getHeight(); }			      
+    				  // adjust margins
+    				  pad._pad.style.height = (pad._pad.clientHeight-margin) + "px"; pad._canvas.style.height=(pad._pad.clientHeight-40) + "px";
+    			  	  if (margin>0) { pad._pad.style.width=(pad._pad.clientWidth-margin) + "px"; }	
+    			  	  // redraw
+    				  pad._canvas.width=pad._canvas.offsetWidth*ratio; pad._canvas.height=pad._canvas.offsetHeight*ratio; pad._ctx.scale(ratio,ratio);			
+    				  // width and height increase
+    				  if ((pad._canvas.width>=startImage.width)&&(pad._canvas.height>=startImage.height))
+    				  	{ endWidth=endImage.width; endHeight=endImage.height; startX=(pad._canvas.width-endWidth)/2; startY=(pad._canvas.height-endHeight)/2; 
+    					  endImage.onload=function() { pad._ctx.drawImage(endImage,startX,startY,endWidth,endHeight); } }
+    				  else
+    				    {
+        				  // background rgb
+        				  backR=parseInt(pad.backgroundColor.substring(1,3),16); backG=parseInt(pad.backgroundColor.substring(3,5),16); backB=parseInt(pad.backgroundColor.substring(5,7),16);
+        				  // get top pixel (from top-left pixel to right)
+        				  startj=0;
+        				  for(j=0;j<startImage.data.length;j+=4) {
+        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==255))) 
+        			            { leftX=rightX=topX=bottomX=x=Math.floor((j+1)/4)%startImage.width; leftY=rightY=topY=bottomY=y=Math.floor(((j+1)/4)/startImage.width); break; }
+        				  }
+        				  // get left pixel (from top pixel skipping pixel on the right of last left)
+        				  startj=(topY+1)*4*startImage.width;
+        				  for(j=startj;j<startImage.data.length;j+=4) { 
+        					  if (j==startj) { x=Math.floor((j+1)/4)%startImage.width; } else { x=(x+1)%startImage.width; }
+        					  if (x>leftX) { j=(Math.floor(((j+1)/4)/startImage.width)+1)*startImage.width*4; x=startj; continue; }
+        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==255))) 
+        			            { if (x<leftX) { leftX=bottomX=x; leftY=bottomY=y=Math.floor(((j+1)/4)/startImage.width); j=(y+1)*startImage.width; } }
+        				  }
+        				  // get bottom pixel (from bottom-right to left)
+        				  startj=startImage.data.length-4;
+        				  for(j=startj;j>leftY*startImage.width*4+leftX*4;j-=4) {				  
+        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==255))) 
+        			            { bottomX=x=Math.floor((j+1)/4)%startImage.width;; bottomY=y=Math.floor(((j+1)/4)/startImage.width); if (x>rightX) { rightX=x; rightY=y; } break; }
+        				  }  
+        				  // get right pixel (from bottom pixel skipping pixel on the left of last right)
+        				  startj=(bottomY-1)*startImage.width*4;
+        				  for(j=startj;j>topY*startImage.width*4+rightX*4;j-=4) {
+        					  if (j==startj) { x=Math.floor((j+1)/4)%startImage.width; } else { x=(x-1)%startImage.width; } 
+        					  if (x<rightX) { j=(Math.floor(((j+1)/4)/startImage.width)-1)*startImage.width*4-4; x=startj; continue; }    					  
+        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==255))) 
+        			            { rightX=x; rightY=y=Math.floor(((j+1)/4)/startImage.width); }
+        				  }    
+        				  // real dimensions
+        				  realStartX = leftX; realStartY = topY; realWidth=rightX-leftX+1; realHeight= bottomY-topY+1;
+    					  // resize
+	    				  if ((pad._canvas.width>=realWidth)&&(pad._canvas.height>=realHeight))
+	    					{ endWidth=realWidth; endHeight=realHeight; startX=(pad._canvas.width-endWidth)/2; startY=(pad._canvas.height-endHeight)/2; 
+	    					  endImage.onload=function() { pad._ctx.drawImage(endImage,realStartX,realStartY,realWidth,realHeight,startX,startY,endWidth,endHeight); } }  
+	    				  else
+	    					{ aspect=Math.min(pad._canvas.width/realWidth,pad._canvas.height/realHeight); 
+	    					  endWidth=realWidth*aspect; endHeight=realHeight*aspect; startX=(pad._canvas.width-endWidth)/2; startY=(pad._canvas.height-endHeight)/2; 
+	    					  endImage.onload=function() { pad._ctx.drawImage(endImage,realStartX,realStartY,realWidth,realHeight,startX,startY,endWidth,endHeight); } 
+    					}
+    				  }
+    				}
+    			   pad.toDataURL();
+    			  }	  
+    		    }
+                  
+        },50);
+
+      });
+      
   	  // adjust 
-  	  window.onresize(this._canvas);
-  	  
+      $(window).resize();
+  	
   	  // adjust css
   	  if (this.getAggregation("clearButton")) 
   	  {
@@ -426,24 +501,23 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
       // get zoom
       if (screen && screen.deviceXDPI && screen.logicalXDPI) { this._zoom = (screen.deviceYDPI / screen.logicalYDPI); } else { this._zoom = window.outerWidth / window.innerWidth; }
       
-    },    
-
+    },  
+    
   });
- 
+  
   signaturePad.prototype.clear = function() {
-      var ctx = this._ctx, canvas = this._canvas;
-      ctx.fillStyle = this.backgroundColor;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      this._ctx.fillStyle = this.backgroundColor;
+      this._ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
+      this._ctx.fillRect(0,0,this._canvas.width,this._canvas.height);
+      this.signature=this._canvas.toDataURL();
+      this.setSignature(this.signature);
       this._reset();
-      
-
   };
 
   signaturePad.prototype.toDataURL = function(imageType, quality) {
-      var imgData=this._ctx.getImageData(0,0,this._canvas.width,this._canvas.height);
-      var data=imgData.data;
-      for(var i=0;i<data.length;i+=4){ if(data[i+3]==0){ data[i]=parseInt(this.backgroundColor.substring(1,3), 16); data[i+1]=parseInt(this.backgroundColor.substring(3,5), 16); data[i+2]=parseInt(this.backgroundColor.substring(5,7), 16); data[i+3]=255; } }
+      var imgData=this._ctx.getImageData(0,0,this._canvas.width,this._canvas.width),backR,backG,backB;
+      backR=parseInt(this.backgroundColor.substring(1,3),16); backG=parseInt(this.backgroundColor.substring(3,5),16); backB=parseInt(this.backgroundColor.substring(5,7),16);
+      for(var i=0;i<imgData.data.length;i+=4){ if(imgData.data[i+3]==0){ imgData.data[i]=backR; imgData.data[i+1]=backG; imgData.data[i+2]=backB; imgData.data[i+3]=255; } }
       this._ctx.putImageData(imgData,0,0);
       return this._canvas.toDataURL.apply(this._canvas, arguments);
   };
@@ -478,18 +552,18 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
       }
            
       // ratio
-      if (zoom != 1) { ratio = zoom; }
-      if (zoom==zoomLevel) { ratio = 1; }
+      if (zoom!=1) {ratio=zoom; }
+      if (zoom==zoomLevel) {ratio= 1;}
       
       
       // load image
-      image.onload = function () { self._ctx.drawImage(image, startx, starty, width, height); };
-      this._isEmpty = false;
+      image.onload=function () { self._ctx.drawImage(image,startx,starty,width,height); };
+      this._isEmpty=false;
 
   };
 
   signaturePad.prototype._strokeUpdate = function(event) {
-      var point = this._createPoint(event);
+      var point=this._createPoint(event);
       this._addPoint(point);
   };
 
@@ -500,61 +574,61 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
   };
 
   signaturePad.prototype._strokeDraw = function(point) {
-  	var ctx = this._ctx, dotSize = typeof(this.dotSize) === 'function' ? this.dotSize() : this.dotSize;
+  	var ctx=this._ctx,dotSize=typeof(this.dotSize)==='function'?this.dotSize():this.dotSize;
       ctx.beginPath();
-      this._drawPoint(point.x, point.y, dotSize);
+      this._drawPoint(point.x,point.y,dotSize);
       ctx.closePath();
       ctx.fill();
   };
 
   signaturePad.prototype._strokeEnd = function(event) {
-	  var canDrawCurve = this.points.length > 2, point = this.points[0];
-      if (!canDrawCurve && point) { this._strokeDraw(point); }
-      this.signature = this.toDataURL(); 
-      this.setProperty("signature", this.signature, true);
+	  var canDrawCurve=this.points.length>2,point=this.points[0];
+      if (!canDrawCurve&&point) { this._strokeDraw(point); }
+      this.signature=this.toDataURL(); 
+      this.setProperty("signature",this.signature,true);
       this.fireStrokeEnd({});
   };
 
   signaturePad.prototype._handleMouseEvents = function() {
-      this._mouseButtonDown = false;
-      this._canvas.addEventListener("mousedown", this._handleMouseDown);
-      this._canvas.addEventListener("mousemove", this._handleMouseMove);
-      document.addEventListener("mouseup", this._handleMouseUp);
+      this._mouseButtonDown=false;
+      this._canvas.addEventListener("mousedown",this._handleMouseDown);
+      this._canvas.addEventListener("mousemove",this._handleMouseMove);
+      document.addEventListener("mouseup",this._handleMouseUp);
   };
 
   signaturePad.prototype._handleTouchEvents = function() {
       // Pass touch events to canvas element on mobile IE11 and Edge.
-      this._canvas.style.msTouchAction = 'none';
-      this._canvas.style.touchAction = 'none';
-      this._canvas.addEventListener("touchstart", this._handleTouchStart);
-      this._canvas.addEventListener("touchmove", this._handleTouchMove);
-      this._canvas.addEventListener("touchend", this._handleTouchEnd);
+      this._canvas.style.msTouchAction='none';
+      this._canvas.style.touchAction='none';
+      this._canvas.addEventListener("touchstart",this._handleTouchStart);
+      this._canvas.addEventListener("touchmove",this._handleTouchMove);
+      this._canvas.addEventListener("touchend",this._handleTouchEnd);
   };
 
   signaturePad.prototype.on = function() { this._handleMouseEvents(); this._handleTouchEvents(); };
 
   signaturePad.prototype.off = function() {
-      this._canvas.removeEventListener("mousedown", this._handleMouseDown);
-      this._canvas.removeEventListener("mousemove", this._handleMouseMove);
-      document.removeEventListener("mouseup", this._handleMouseUp);
-      this._canvas.removeEventListener("touchstart", this._handleTouchStart);
-      this._canvas.removeEventListener("touchmove", this._handleTouchMove);
-      this._canvas.removeEventListener("touchend", this._handleTouchEnd);
+      this._canvas.removeEventListener("mousedown",this._handleMouseDown);
+      this._canvas.removeEventListener("mousemove",this._handleMouseMove);
+      document.removeEventListener("mouseup",this._handleMouseUp);
+      this._canvas.removeEventListener("touchstart",this._handleTouchStart);
+      this._canvas.removeEventListener("touchmove",this._handleTouchMove);
+      this._canvas.removeEventListener("touchend",this._handleTouchEnd);
   };
 
   signaturePad.prototype.isEmpty = function() { return this._isEmpty; };
 
   signaturePad.prototype._reset = function() {
-      this.points = [];
-      this._lastVelocity = 0;
-      this._lastWidth = (this._minWidth + this._maxWidth) / 2;
-      this._isEmpty = true;
-      this._ctx.fillStyle = this.penColor;
+      this.points=[];
+      this._lastVelocity=0;
+      this._lastWidth=(this._minWidth+this._maxWidth)/2;
+      this._isEmpty=true;
+      this._ctx.fillStyle=this.penColor;
   };
   
   signaturePad.prototype._createPoint = function (event) {
-      var rect = this._canvas.getBoundingClientRect();
-      return new point( event.clientX - rect.left, event.clientY - rect.top );
+      var rect=this._canvas.getBoundingClientRect();
+      return new point(event.clientX-rect.left,event.clientY-rect.top);
   };
 
   signaturePad.prototype._addPoint = function (point) {
