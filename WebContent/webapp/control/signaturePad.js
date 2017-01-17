@@ -373,7 +373,7 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
     		      // get pixel ratio
     		      var ratio=Math.max(window.devicePixelRatio||1,1);
     			  // redraw according to the content
-    			  var i,j,startj,x,y,backR,backG,backB,topX,bottomX,leftX,rightX,topY,bottomY,leftY,rightY,realWidth,realHeight,realStartX,realStartY,pad,pads,startWidth,startHeight,startImage,endImage,margin,aspect,startX,startY,endWidth,endHeight;
+    			  var i,j,startj,x,y,backR,backG,backB,backA,topX,bottomX,leftX,rightX,topY,bottomY,leftY,rightY,realWidth,realHeight,realStartX,realStartY,pad,pads,startWidth,startHeight,startImage,endImage,margin,aspect,startX,startY,endWidth,endHeight;
     			  // get pads
     			  pads = document.querySelectorAll("div.m-signature-pad");
     			  // for each pad
@@ -401,11 +401,12 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
     				  else
     				    {
         				  // background rgb
-        				  backR=parseInt(pad.backgroundColor.substring(1,3),16); backG=parseInt(pad.backgroundColor.substring(3,5),16); backB=parseInt(pad.backgroundColor.substring(5,7),16);
+        				  // backR=parseInt(pad.backgroundColor.substring(1,3),16); backG=parseInt(pad.backgroundColor.substring(3,5),16); backB=parseInt(pad.backgroundColor.substring(5,7),16); backA=255;
+        				  backR=0; backG=0; backB=0; backA=0;
         				  // get top pixel (from top-left pixel to right)
         				  startj=0;
         				  for(j=0;j<startImage.data.length;j+=4) {
-        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==255))) 
+        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==backA))) 
         			            { leftX=rightX=topX=bottomX=x=Math.floor((j+1)/4)%startImage.width; leftY=rightY=topY=bottomY=y=Math.floor(((j+1)/4)/startImage.width); break; }
         				  }
         				  // get left pixel (from top pixel skipping pixel on the right of last left)
@@ -413,13 +414,13 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
         				  for(j=startj;j<startImage.data.length;j+=4) { 
         					  if (j==startj) { x=Math.floor((j+1)/4)%startImage.width; } else { x=(x+1)%startImage.width; }
         					  if (x>leftX) { j=(Math.floor(((j+1)/4)/startImage.width)+1)*startImage.width*4; x=startj; continue; }
-        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==255))) 
+        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==backA))) 
         			            { if (x<leftX) { leftX=bottomX=x; leftY=bottomY=y=Math.floor(((j+1)/4)/startImage.width); j=(y+1)*startImage.width; } }
         				  }
         				  // get bottom pixel (from bottom-right to left)
         				  startj=startImage.data.length-4;
         				  for(j=startj;j>leftY*startImage.width*4+leftX*4;j-=4) {				  
-        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==255))) 
+        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==backA))) 
         			            { bottomX=x=Math.floor((j+1)/4)%startImage.width;; bottomY=y=Math.floor(((j+1)/4)/startImage.width); if (x>rightX) { rightX=x; rightY=y; } break; }
         				  }  
         				  // get right pixel (from bottom pixel skipping pixel on the left of last right)
@@ -427,7 +428,7 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
         				  for(j=startj;j>topY*startImage.width*4+rightX*4;j-=4) {
         					  if (j==startj) { x=Math.floor((j+1)/4)%startImage.width; } else { x=(x-1)%startImage.width; } 
         					  if (x<rightX) { j=(Math.floor(((j+1)/4)/startImage.width)-1)*startImage.width*4-4; x=startj; continue; }    					  
-        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==255))) 
+        					  if (!((startImage.data[j]==backR) && (startImage.data[j+1]==backG) && (startImage.data[j+2]==backB) && (startImage.data[j+3]==backA))) 
         			            { rightX=x; rightY=y=Math.floor(((j+1)/4)/startImage.width); }
         				  }    
         				  // real dimensions
@@ -515,11 +516,23 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
   };
 
   signaturePad.prototype.toDataURL = function(imageType, quality) {
-      var imgData=this._ctx.getImageData(0,0,this._canvas.width,this._canvas.width),backR,backG,backB;
-      backR=parseInt(this.backgroundColor.substring(1,3),16); backG=parseInt(this.backgroundColor.substring(3,5),16); backB=parseInt(this.backgroundColor.substring(5,7),16);
-      for(var i=0;i<imgData.data.length;i+=4){ if(imgData.data[i+3]==0){ imgData.data[i]=backR; imgData.data[i+1]=backG; imgData.data[i+2]=backB; imgData.data[i+3]=255; } }
+	  // declarations
+      var imgData,oldCompOp;
+      // get image data
+      imgData=this._ctx.getImageData(0,0,this._canvas.width,this._canvas.width)
+      // set comp. operation
+      oldCompOp = this._ctx.globalCompositeOperation = "destination-over";
+      // set background color
+      this._ctx.fillStyle=this.backgroundColor;
+      this._ctx.fillRect(0,0,this._canvas.width,this._canvas.height);
+      // get data url
+      var dataURL = this._canvas.toDataURL.apply(this._canvas, arguments);
+      // reset rectangle
+      this._ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
       this._ctx.putImageData(imgData,0,0);
-      return this._canvas.toDataURL.apply(this._canvas, arguments);
+      // reset comp. operation
+      this._ctx.globalCompositeOperation = oldCompOp;
+      return dataURL;
   };
   
   signaturePad.prototype.fromDataURL = function(dataUrl,zoomLevel) {
