@@ -396,10 +396,14 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
     				  pad._canvas.width=pad._canvas.offsetWidth*ratio; pad._canvas.height=pad._canvas.offsetHeight*ratio; pad._ctx.scale(ratio,ratio);			
     				  // width and height increase
     				  if ((pad._canvas.width>=startImage.width)&&(pad._canvas.height>=startImage.height))
-    				  	{ endWidth=endImage.width; endHeight=endImage.height; startX=(pad._canvas.width-endWidth)/2; startY=(pad._canvas.height-endHeight)/2; 
-    					  endImage.onload=function() { pad._ctx.drawImage(endImage,startX,startY,endWidth,endHeight); } }
+    				  	{ endImage.onload=function() { pad._ctx.drawImage(endImage,(pad._canvas.width-endImage.width)/2,(pad._canvas.height-endImage.height)/2,endImage.width,endImage.height); } }
     				  else
     				    {
+    					  
+    					  if (!((pad._realStartX)&&(pad._realStartY)&&(pad._realWidth)&&(pad._realHeight))) { pad._setDrawnArea(); }
+    							  
+    					  
+/*    					  
         				  // background rgb
         				  // backR=parseInt(pad.backgroundColor.substring(1,3),16); backG=parseInt(pad.backgroundColor.substring(3,5),16); backB=parseInt(pad.backgroundColor.substring(5,7),16); backA=255;
         				  backR=0; backG=0; backB=0; backA=0;
@@ -432,15 +436,15 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
         			            { rightX=x; rightY=y=Math.floor(((j+1)/4)/startImage.width); }
         				  }    
         				  // real dimensions
-        				  realStartX = leftX; realStartY = topY; realWidth=rightX-leftX+1; realHeight= bottomY-topY+1;
+        				  realStartX = leftX; realStartY = topY; realWidth=rightX-leftX+1; realHeight= bottomY-topY+1;*/
+        				  
+        				  
     					  // resize
-	    				  if ((pad._canvas.width>=realWidth)&&(pad._canvas.height>=realHeight))
-	    					{ endWidth=realWidth; endHeight=realHeight; startX=(pad._canvas.width-endWidth)/2; startY=(pad._canvas.height-endHeight)/2; 
-	    					  endImage.onload=function() { pad._ctx.drawImage(endImage,realStartX,realStartY,realWidth,realHeight,startX,startY,endWidth,endHeight); } }  
+	    				  if ((pad._canvas.width>=pad._realWidth)&&(pad._canvas.height>=pad._realHeight))
+	    					{ endImage.onload=function() { pad._ctx.drawImage(endImage,pad._realStartX,pad._realStartY,pad._realWidth,pad._realHeight,(pad._canvas.width-pad._realWidth)/2,(pad._canvas.height-pad._realHeight)/2,pad._realWidth,pad._realHeight); } }  
 	    				  else
-	    					{ aspect=Math.min(pad._canvas.width/realWidth,pad._canvas.height/realHeight); 
-	    					  endWidth=realWidth*aspect; endHeight=realHeight*aspect; startX=(pad._canvas.width-endWidth)/2; startY=(pad._canvas.height-endHeight)/2; 
-	    					  endImage.onload=function() { pad._ctx.drawImage(endImage,realStartX,realStartY,realWidth,realHeight,startX,startY,endWidth,endHeight); } 
+	    					{ aspect=Math.min(pad._canvas.width/pad._realWidth,pad._canvas.height/pad._realHeight); 
+	    					  endImage.onload=function() { pad._ctx.drawImage(endImage,pad._realStartX,pad._realStartY,pad._realWidth,pad._realHeight,(pad._canvas.width-pad._realWidth*aspect)/2,(pad._canvas.height-pad._realHeight*aspect)/2,pad._realWidth*aspect,pad._realHeight*aspect); } 
     					}
     				  }
     				}
@@ -448,7 +452,7 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
     			  }	  
     		    }
                   
-        },10);
+        },250);
 
       });
       
@@ -512,6 +516,7 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
       this._ctx.fillRect(0,0,this._canvas.width,this._canvas.height);
       this.signature=this._canvas.toDataURL();
       this.setSignature(this.signature);
+      this._realStartX=this._realStartY=this._realWidth=this._realHeight=null;
       this._reset();
   };
 
@@ -599,6 +604,7 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
       if (!canDrawCurve&&point) { this._strokeDraw(point); }
       this.signature=this.toDataURL(); 
       this.setProperty("signature",this.signature,true);
+      this._setDrawnArea();
       this.fireStrokeEnd({});
   };
 
@@ -722,7 +728,41 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
   };
 
   signaturePad.prototype._strokeWidth = function(velocity) { return Math.max(this._maxWidth / (velocity + 1), this._minWidth); };
-	  
-  return signaturePad;
   
+  signaturePad.prototype._setDrawnArea = function() {
+      // declare variables
+	  var x,y,j,startj,topX,topY,leftX,leftY,bottomX,bottomY,rightX,rightY;
+	  // get Image
+	  this._startImage=this._ctx.getImageData(0,0,this._canvas.width,this._canvas.height);
+	  
+	  for(j=0;j<this._startImage.data.length;j+=4) {
+		  if (!((this._startImage.data[j]==0) && (this._startImage.data[j+1]==0) && (this._startImage.data[j+2]==0) && (this._startImage.data[j+3]==0))) 
+            { leftX=rightX=topX=bottomX=x=Math.floor((j+1)/4)%this._startImage.width; leftY=rightY=topY=bottomY=y=Math.floor(((j+1)/4)/this._startImage.width); break; }
+	  }
+	  // get left pixel (from top pixel skipping pixel on the right of last left)
+	  startj=(topY+1)*4*this._startImage.width;
+	  for(j=startj;j<this._startImage.data.length;j+=4) { 
+		  if (j==startj) { x=Math.floor((j+1)/4)%this._startImage.width; } else { x=(x+1)%this._startImage.width; }
+		  if (x>leftX) { j=(Math.floor(((j+1)/4)/this._startImage.width)+1)*this._startImage.width*4; x=startj; continue; }
+		  if (!((this._startImage.data[j]==0)&&(this._startImage.data[j+1]==0)&&(this._startImage.data[j+2]==0)&&(this._startImage.data[j+3]==0))) 
+            { if (x<leftX) { leftX=bottomX=x; leftY=bottomY=y=Math.floor(((j+1)/4)/this._startImage.width); j=(y+1)*this._startImage.width; } }
+	  }
+	  // get bottom pixel (from bottom-right to left)
+	  startj=this._startImage.data.length-4;
+	  for(j=startj;j>leftY*this._startImage.width*4+leftX*4;j-=4) {				  
+		  if (!((this._startImage.data[j]==0)&&(this._startImage.data[j+1]==0)&&(this._startImage.data[j+2]==0)&&(this._startImage.data[j+3]==0))) 
+            { bottomX=x=Math.floor((j+1)/4)%this._startImage.width;; bottomY=y=Math.floor(((j+1)/4)/this._startImage.width); if (x>rightX) { rightX=x; rightY=y; } break; }
+	  }  
+	  // get right pixel (from bottom pixel skipping pixel on the left of last right)
+	  startj=(bottomY-1)*this._startImage.width*4;
+	  for(j=startj;j>topY*this._startImage.width*4+rightX*4;j-=4) {
+		  if (j==startj) { x=Math.floor((j+1)/4)%this._startImage.width; } else { x=(x-1)%this._startImage.width; } 
+		  if (x<rightX) { j=(Math.floor(((j+1)/4)/this._startImage.width)-1)*this._startImage.width*4-4; x=startj; continue; }    					  
+		  if (!((this._startImage.data[j]==0)&&(this._startImage.data[j+1]==0)&&(this._startImage.data[j+2]==0)&&(this._startImage.data[j+3]==0))) 
+            { rightX=x; rightY=y=Math.floor(((j+1)/4)/this._startImage.width); }
+	  }    
+	  // real dimensions
+	  this._realStartX = leftX; this._realStartY = topY; this._realWidth=rightX-leftX+1; this._realHeight=bottomY-topY+1;	  
+  }
+  return signaturePad;
 });
