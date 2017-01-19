@@ -444,11 +444,11 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
     					}
     				  }
     				}
-    			   pad.toDataURL();
+    			   //pad.toDataURL();
     			  }	  
     		    }
                   
-        },50);
+        },10);
 
       });
       
@@ -497,7 +497,7 @@ sap.ui.define(['sap/ui/core/Control'], function(oControl) {
       // initialize canvas drawn
 	  this.dotSize = this.getDotSize();
 	  this.penColor = this.getPenColor();
-      this.fromDataURL(this.getSignature(),this._zoom);
+      // this.fromDataURL(this.getSignature(),this._zoom);
       
       // get zoom
       if (screen && screen.deviceXDPI && screen.logicalXDPI) { this._zoom = (screen.deviceYDPI / screen.logicalYDPI); } else { this._zoom = window.outerWidth / window.innerWidth; }
